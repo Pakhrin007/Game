@@ -1,14 +1,20 @@
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:firebase_core/firebase_core.dart';
+
+import 'package:banana/wrapper_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'core/app_theme.dart';
 import 'core/routes.dart';
 
-void main() {     
-  
-  // WidgetsFlutterBinding.ensureInitialized();  
-  // await Firebase.initializeApp();
-
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+    print('✅ Firebase initialized! App name: ${Firebase.app().name}');
+  } catch (e) {
+    print('❌ Firebase init error: $e');
+  }
   runApp(const MyApp());
 }
 
@@ -17,12 +23,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+     return GetMaterialApp(
       title: "Banana Puzzle",
       theme: AppTheme.lightTheme,
       routes: AppRoutes.routes,
-      initialRoute: AppRoutes.login,
       debugShowCheckedModeBanner: false,
+      home: const WrapperScreen(), // ✅ Only this, no initialRoute
     );
   }
 }

@@ -2,8 +2,8 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    // ADD THIS LINE:
-    // id("com.google.gms.google-services")
+    id("com.google.gms.google-services")
+   
 }
 
 android {
@@ -39,9 +39,12 @@ flutter {
     source = "../.."
 }
 
-// dependencies {
-//     // ADD THESE FOR FIREBASE (aligns with Flutter's firebase_core/auth):
-//     implementation(platform("com.google.firebase:firebase-bom:33.6.0"))  // Latest BOM as of Nov 2025
-//     implementation("com.google.firebase:firebase-auth-ktx")  // For Auth
-//     // Add others if needed, e.g., implementation("com.google.firebase:firebase-firestore-ktx")
-// }
+dependencies {
+  // Import the Firebase BoM
+  implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+
+
+  // TODO: Add the dependencies for Firebase products you want to use
+  // When using the BoM, don't specify versions in Firebase dependencies
+  // https://firebase.google.com/docs/android/setup#available-libraries
+}

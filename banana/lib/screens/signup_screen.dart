@@ -1,7 +1,8 @@
-
 import 'package:banana/core/colors.dart';
 import 'package:banana/core/routes.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:velocity_x/velocity_x.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -12,150 +13,211 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> _handleSignup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      Get.snackbar("Error", "Passwords do not match",
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (mounted) {
+        Get.snackbar("Success", "Signup successful!",
+            backgroundColor: Colors.green, colorText: Colors.white);
+      }
+
+      // ✅ WrapperScreen listens for auth changes and will redirect automatically.
+    } on FirebaseAuthException catch (e) {
+      String message = 'Signup failed. Please try again.';
+      if (e.code == 'email-already-in-use') message = 'Email already in use.';
+      if (e.code == 'invalid-email') message = 'Invalid email format.';
+      if (e.code == 'weak-password') message = 'Weak password.';
+
+      Get.snackbar("Error", message,
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        
-        backgroundColor: Colors.white,
-        body: SingleChildScrollView(
-          child: Form(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
             children: [
-              // Icon(Icons.arrow_back,size: 30,color: MyTheme.primaryColor,).pOnly(top: 30,left: 20),
-     
-              10.heightBox,
-              Center(child: Image.asset('assets/images/image2.jpg',height: 250,width: 400,),),
-               20.heightBox,
-            
-              Center(child: "SignUp to Play !!".text.color(AppColors.primaryColor).textStyle(TextStyle(fontFamily: 
-              'libertin',fontSize: 24)).make()),
-
+              40.heightBox,
+              Image.asset('assets/images/image2.jpg', height: 250, width: 400),
               20.heightBox,
-            
-           
-           
-              Padding(
-                padding: const EdgeInsets.only(left: 8,right: 8),
-                child: TextFormField(
-                   decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.email),
-                      prefixIconColor: Colors.black,
-                      labelText: 'E-mail',
-                      labelStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                      hintText: "Your E-mail",
-                      hintStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)
-                      ),  
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primaryColor ))
-
-                    ),
+              "Sign Up to Play !!"
+                  .text
+                  .color(AppColors.primaryColor)
+                  .textStyle(const TextStyle(fontFamily: 'libertin', fontSize: 24))
+                  .make(),
+              30.heightBox,
+              _buildTextField(
+                controller: _emailController,
+                icon: Icons.email,
+                label: 'Email',
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Enter your email';
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+                    return 'Enter valid email';
+                  }
+                  return null;
+                },
+              ),
+              15.heightBox,
+              _buildTextField(
+                controller: _phoneController,
+                icon: Icons.phone,
+                label: 'Phone Number',
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Enter your phone number' : null,
+              ),
+              15.heightBox,
+              _buildTextField(
+                controller: _passwordController,
+                icon: Icons.lock,
+                label: 'Password',
+                obscureText: _obscurePassword,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Enter your password';
+                  if (v.length < 6) return 'Minimum 6 characters';
+                  return null;
+                },
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
-              13.heightBox,
-
-              Padding(
-                padding: const EdgeInsets.only(left: 8,right: 8),
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    prefixIcon: Icon(Icons.phone),
-                    prefixIconColor: Colors.black,
-                    labelText:"PhoneNumber" ,
-                    labelStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                    hintText: "Your PhoneNumber",
-                    hintStyle:TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)
-                    ),
-                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primaryColor))
-                  ),
+              15.heightBox,
+              _buildTextField(
+                controller: _confirmPasswordController,
+                icon: Icons.lock_outline,
+                label: 'Confirm Password',
+                obscureText: _obscureConfirmPassword,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Confirm your password';
+                  if (v != _passwordController.text)
+                    return 'Passwords do not match';
+                  return null;
+                },
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureConfirmPassword
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () => setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword),
                 ),
               ),
-                13.heightBox,
-              Padding(
-                padding: const EdgeInsets.only(left: 8,right: 8),
-                child: TextFormField(
-                   decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.email),
-                      prefixIconColor: Colors.black,
-                      labelText: 'Password',
-                      labelStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                      hintText: "Your Password",
-                      hintStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                      
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)
-                      ),  
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primaryColor  ))
-
-                    ),
-                ),
+              25.heightBox,
+              _buildButton(
+                text: "Sign Up",
+                onTap: _isLoading ? null : _handleSignup,
+                isLoading: _isLoading,
               ),
-                13.heightBox,
-              Padding(
-                padding: const EdgeInsets.only(left: 8,right: 8),
-                child: TextFormField(
-                   decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.email),
-                      prefixIconColor: Colors.black,
-                      labelText: 'Confirm-Password',
-                      labelStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                      hintText: "Confirm Password",
-                      hintStyle: TextStyle(fontSize: 16,fontFamily: 'libertin',fontWeight: FontWeight.w500),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)
-                      ),  
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primaryColor  ))
-
-                    ),
-                ),
-              ),
-                     5.heightBox,
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Center(
-                  child: Material(
-                    color: AppColors.primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)
-                    ),
-                    child: InkWell(
-                      child: AnimatedContainer(duration: Duration(),
-                      height: 50,
-                      width: double.infinity,
-                      alignment: Alignment.center,
-                      child: "SignUp".text.color(Colors.white).textStyle(TextStyle(fontFamily: 
-                      'libertin',fontSize: 18,fontWeight: FontWeight.bold,letterSpacing: 1.38)).make(),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              
-
-              
-
-            10.heightBox,
+              15.heightBox,
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  
-                  "Already Have Account?".text.textStyle(TextStyle(fontSize: 16,fontFamily: 'libertin')).make(),
-                  "Login".text.color(Colors.blue).textStyle(TextStyle(fontSize: 16,fontFamily: 'libertin')).make().px(5).onInkTap(
-                () {
-                Navigator.pushReplacementNamed(context, AppRoutes.login);
-                },
-                  ),
+                  "Already Have Account?".text.make(),
+                  "Login"
+                      .text
+                      .color(Colors.blue)
+                      .make()
+                      .px(5)
+                      .onInkTap(() => Navigator.pushReplacementNamed(
+                          context, AppRoutes.login)),
                 ],
-              )
-
+              ),
             ],
-          )),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String label,
+    required String? Function(String?) validator,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        validator: validator,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon),
+          suffixIcon: suffixIcon,
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    required String text,
+    required VoidCallback? onTap,
+    required bool isLoading,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Material(
+        color: AppColors.primaryColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: 50,
+            width: double.infinity,
+            alignment: Alignment.center,
+            child: isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : text.text.white.bold.make(),
+          ),
         ),
       ),
     );

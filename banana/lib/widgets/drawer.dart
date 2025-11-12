@@ -1,4 +1,5 @@
 import 'package:banana/screens/leaderBoard_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:velocity_x/velocity_x.dart';
 import '../core/colors.dart';
@@ -12,6 +13,20 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut(); // ✅ Sign out from Firebase
+      Navigator.pushReplacementNamed(context, AppRoutes.login); // Go to Login
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -40,9 +55,8 @@ class _AppDrawerState extends State<AppDrawer> {
             },
           ),
 
-      
-
-            ListTile(
+          // Leaderboard Tile
+          ListTile(
             leading: Icon(Icons.leaderboard, color: AppColors.primaryColor),
             title: "Leaderboard".text.make(),
             onTap: () {
@@ -55,11 +69,9 @@ class _AppDrawerState extends State<AppDrawer> {
 
           // Logout Tile
           ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
+            leading: const Icon(Icons.logout, color: Colors.red),
             title: "Logout".text.color(Colors.red).make(),
-            onTap: () {
-              Navigator.pushReplacementNamed(context, AppRoutes.login);
-            },
+            onTap: () => _logout(context), // ✅ Call logout function
           ),
         ],
         crossAlignment: CrossAxisAlignment.start,
