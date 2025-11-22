@@ -41,7 +41,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // ✅ Do NOT navigate manually. The WrapperScreen listens for auth changes.
     } on FirebaseAuthException catch (e) {
       String message = 'Login failed. Please try again.';
       switch (e.code) {
@@ -136,8 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       .color(Colors.blue)
                       .make()
                       .px(5)
-                      .onInkTap(() => Navigator.pushReplacementNamed(
-                          context, AppRoutes.signup)),
+                      .onInkTap(() => Get.offNamed(AppRoutes.signup)),
                 ],
               ),
             ],

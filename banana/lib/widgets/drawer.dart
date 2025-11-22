@@ -1,4 +1,5 @@
 import 'package:banana/screens/leaderBoard_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:velocity_x/velocity_x.dart';
@@ -13,10 +14,38 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
+  String username = "";
+  String email = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user != null) {
+    final data = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    if (data.exists) {
+      setState(() {
+        email = data.data()?["email"] ?? "No email";
+        username = data.data()?["username"] ?? "Guest User";
+      });
+    }
+  }
+}
+
+
   Future<void> _logout(BuildContext context) async {
     try {
-      await FirebaseAuth.instance.signOut(); // ✅ Sign out from Firebase
-      Navigator.pushReplacementNamed(context, AppRoutes.login); // Go to Login
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Logged out successfully')),
       );
@@ -42,11 +71,11 @@ class _AppDrawerState extends State<AppDrawer> {
           ).centered(),
 
           20.heightBox,
-          "Profile".text.xl2.bold.color(AppColors.primaryColor).makeCentered(),
+          username.text.xl2.bold.color(AppColors.primaryColor).makeCentered(),
+          email.text.makeCentered(),
 
           30.heightBox,
 
-          // Home Tile
           ListTile(
             leading: Icon(Icons.home, color: AppColors.primaryColor),
             title: "Home".text.make(),
@@ -55,23 +84,21 @@ class _AppDrawerState extends State<AppDrawer> {
             },
           ),
 
-          // Leaderboard Tile
           ListTile(
             leading: Icon(Icons.leaderboard, color: AppColors.primaryColor),
             title: "Leaderboard".text.make(),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => LeaderboardWidget()),
+                MaterialPageRoute(builder: (_) => LeaderboardScreen()),
               );
             },
           ),
 
-          // Logout Tile
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: "Logout".text.color(Colors.red).make(),
-            onTap: () => _logout(context), // ✅ Call logout function
+            onTap: () => _logout(context),
           ),
         ],
         crossAlignment: CrossAxisAlignment.start,

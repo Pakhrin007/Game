@@ -10,6 +10,10 @@ import '../widgets/option_button.dart';
 import '../widgets/puzzle_image.dart';
 import '../core/colors.dart';
 
+// NEW: Add these imports for Firebase
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class PuzzleScreen extends StatefulWidget {
   const PuzzleScreen({super.key});
 
@@ -52,12 +56,40 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     return set.toList()..shuffle();
   }
 
+  // NEW: Paste the updateScore function here (as a class method)
+  Future<void> updateScore(int newScore) async {
+    // Optional: Add null check for unauthenticated users
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Handle unauthenticated state (e.g., redirect to login)
+      print("User not authenticated – skipping score update");
+      return;
+    }
+
+    final uid = user.uid;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(uid)
+          .update({"points": newScore});
+      print("Score updated to $newScore in Firestore");  // Debug log
+    } catch (e) {
+      print("Error updating score: $e");  // Handle errors (e.g., doc doesn't exist yet)
+      // Optional: Use .set() instead of .update() for first-time writes
+      // await FirebaseFirestore.instance.collection("users").doc(uid).set({"points": newScore}, SetOptions(merge: true));
+    }
+  }
+
   void checkAnswer(int choice) {
     if (choice == puzzle!.answer) {
       setState(() {
         score += 10;
         message = "Correct!";
       });
+
+      // NEW: Call updateScore right after local state update
+      updateScore(score);  // Sync total score to Firestore
     } else {
       setState(() {
         message = "Incorrect!";
@@ -75,8 +107,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         title: "Banana Puzzle".text.textStyle(TextStyle(color: AppColors.primaryColor,fontFamily: 
               'libertin',fontSize: 24)).make(),
               backgroundColor: Colors.yellow[50],
-              
-        
       ),
       drawer: const AppDrawer(),
       
@@ -103,8 +133,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
               alignment: MainAxisAlignment.center,
               crossAlignment: CrossAxisAlignment.center,
             ).scrollVertical().p20(),
-
     );
   }
 }
-

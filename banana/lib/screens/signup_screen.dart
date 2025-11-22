@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:velocity_x/velocity_x.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,56 +20,85 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _nameController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> _handleSignup() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> signUp(
+  TextEditingController password,
+  TextEditingController email,
+  TextEditingController name,
+) async {
+  if (!_formKey.currentState!.validate()) return;
 
-    if (_passwordController.text != _confirmPasswordController.text) {
-      Get.snackbar("Error", "Passwords do not match",
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return;
-    }
+  setState(() => _isLoading = true);
 
-    setState(() => _isLoading = true);
-    try {
-      await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+  try {
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: email.text.trim(),
+      password: password.text.trim(),
+    );
+
+    final User? user = userCredential.user;
+
+    if (user != null) {
+      // SAVE USER DATA TO FIRESTORE
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .set({
+        "uid": user.uid,
+        "email": email.text.trim(),
+        "name": name.text.trim(),
+        "createdAt": Timestamp.now(),
+        "points":0,
+      });
+
+      Get.snackbar(
+        "Success",
+        "Account created! Welcome, ${name.text.trim()}!",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
       );
 
-      if (mounted) {
-        Get.snackbar("Success", "Signup successful!",
-            backgroundColor: Colors.green, colorText: Colors.white);
-      }
-
-      // ✅ WrapperScreen listens for auth changes and will redirect automatically.
-    } on FirebaseAuthException catch (e) {
-      String message = 'Signup failed. Please try again.';
-      if (e.code == 'email-already-in-use') message = 'Email already in use.';
-      if (e.code == 'invalid-email') message = 'Invalid email format.';
-      if (e.code == 'weak-password') message = 'Weak password.';
-
-      Get.snackbar("Error", message,
-          backgroundColor: Colors.red, colorText: Colors.white);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      // Navigate after success (adjust route as needed)
+      Get.offAllNamed(AppRoutes.home);  // Or wherever you want to go
     }
+  } on FirebaseAuthException catch (e) {
+    String errorMsg = "Signup failed";
+    switch (e.code) {
+      case 'weak-password':
+        errorMsg = 'Password is too weak. Use at least 6 characters.';
+        break;
+      case 'email-already-in-use':
+        errorMsg = 'Email is already registered. Try logging in.';
+        break;
+      default:
+        errorMsg = e.message ?? errorMsg;
+    }
+    Get.snackbar("Error", errorMsg, backgroundColor: Colors.red, colorText: Colors.white);
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
+// Add this new method
+void _handleSignup() {
+  signUp(_passwordController, _emailController, _nameController);
+}
 
+// In dispose(), update to dispose the new controller
+@override
+void dispose() {
+  _emailController.dispose();
+  _nameController.dispose();  // Replace _phoneController.dispose()
+  _passwordController.dispose();
+  _confirmPasswordController.dispose();
+  super.dispose();
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,10 +132,10 @@ class _SignupScreenState extends State<SignupScreen> {
               15.heightBox,
               _buildTextField(
                 controller: _phoneController,
-                icon: Icons.phone,
-                label: 'Phone Number',
+                icon: Icons.people_alt,
+                label: 'UserName',
                 validator: (v) =>
-                    v == null || v.isEmpty ? 'Enter your phone number' : null,
+                    v == null || v.isEmpty ? 'Enter your Username' : null,
               ),
               15.heightBox,
               _buildTextField(
@@ -133,8 +164,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 obscureText: _obscureConfirmPassword,
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Confirm your password';
-                  if (v != _passwordController.text)
+                  if (v != _passwordController.text) {
                     return 'Passwords do not match';
+                  }
                   return null;
                 },
                 suffixIcon: IconButton(
@@ -161,8 +193,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       .color(Colors.blue)
                       .make()
                       .px(5)
-                      .onInkTap(() => Navigator.pushReplacementNamed(
-                          context, AppRoutes.login)),
+                      .onInkTap(() => Get.offNamed(AppRoutes.login)),
                 ],
               ),
             ],
